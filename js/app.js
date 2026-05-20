@@ -73,11 +73,11 @@ var LifeDashboard = (function () {
      */
     _getGreeting: function (hour) {
       if (hour >= 5 && hour <= 11) {
-        return 'Selamat Pagi';
+        return 'Good Morning';
       } else if (hour >= 12 && hour <= 17) {
-        return 'Selamat Siang';
+        return 'Good Afternoon';
       } else {
-        return 'Selamat Malam';
+        return 'Good Night';
       }
     },
 
@@ -97,16 +97,16 @@ var LifeDashboard = (function () {
      * @returns {string} format "Senin, 14 Juli 2025"
      */
     _formatDate: function (date) {
-      var days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       var months = [
-        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
       ];
       var dayName   = days[date.getDay()];
       var dateNum   = date.getDate();
       var monthName = months[date.getMonth()];
       var year      = date.getFullYear();
-      return dayName + ', ' + dateNum + ' ' + monthName + ' ' + year;
+      return dayName + ', ' + monthName + ' ' + dateNum + ', ' + year;
     }
   };
 
@@ -179,7 +179,7 @@ var LifeDashboard = (function () {
         if (action === 'toggle') {
           self._toggleTask(id);
         } else if (action === 'edit') {
-          var newText = window.prompt('Edit tugas:', itemEl.querySelector('.todo__item-text').textContent);
+          var newText = window.prompt('Edit task:', itemEl.querySelector('.todo__item-text').textContent);
           if (newText !== null) {
             self._editTask(id, newText);
           }
@@ -221,9 +221,9 @@ var LifeDashboard = (function () {
         checkbox.type = 'checkbox';
         checkbox.checked = task.completed;
         checkbox.setAttribute('data-action', 'toggle');
-        checkbox.setAttribute('aria-label', task.completed ? 'Tandai belum selesai' : 'Tandai selesai');
+        checkbox.setAttribute('aria-label', task.completed ? 'Mark as incomplete' : 'Mark as complete');
 
-        // <span> teks tugas — dicoret jika selesai
+        // Task text — strikethrough if done
         var span = document.createElement('span');
         span.className = 'todo__item-text';
         span.textContent = task.text;
@@ -232,21 +232,21 @@ var LifeDashboard = (function () {
           span.style.textDecoration = 'line-through';
         }
 
-        // Tombol edit
+        // Edit button
         var editBtn = document.createElement('button');
         editBtn.type = 'button';
         editBtn.setAttribute('data-action', 'edit');
         editBtn.className = 'todo__btn todo__btn--edit';
         editBtn.textContent = 'Edit';
-        editBtn.setAttribute('aria-label', 'Edit tugas');
+        editBtn.setAttribute('aria-label', 'Edit task');
 
-        // Tombol hapus
+        // Delete button
         var deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
         deleteBtn.setAttribute('data-action', 'delete');
         deleteBtn.className = 'todo__btn todo__btn--delete';
-        deleteBtn.textContent = 'Hapus';
-        deleteBtn.setAttribute('aria-label', 'Hapus tugas');
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.setAttribute('aria-label', 'Delete task');
 
         li.appendChild(checkbox);
         li.appendChild(span);
@@ -388,16 +388,16 @@ var LifeDashboard = (function () {
       el.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
     },
 
-    /** Tampilkan notifikasi sesi selesai. */
+    /** Show focus session complete notification. */
     _notify: function () {
       try {
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          new Notification('Life Dashboard', { body: 'Sesi fokus selesai! Waktunya istirahat.' });
+          new Notification('Life Dashboard', { body: 'Focus session complete! Time for a break.' });
         } else {
-          alert('Sesi fokus selesai! Waktunya istirahat.');
+          alert('Focus session complete! Time for a break.');
         }
       } catch (e) {
-        // Kegagalan notifikasi diabaikan secara diam-diam
+        // Notification failure silently ignored
       }
     }
   };
@@ -500,7 +500,7 @@ var LifeDashboard = (function () {
         deleteBtn.setAttribute('data-action', 'delete');
         deleteBtn.className = 'links__btn links__btn--delete';
         deleteBtn.textContent = '×';
-        deleteBtn.setAttribute('aria-label', 'Hapus tautan ' + link.name);
+        deleteBtn.setAttribute('aria-label', 'Remove link ' + link.name);
 
         li.appendChild(a);
         li.appendChild(deleteBtn);
@@ -518,7 +518,7 @@ var LifeDashboard = (function () {
 
       if (name.trim().length === 0 || url.trim().length === 0) {
         if (errorEl) {
-          errorEl.textContent = 'Nama dan URL wajib diisi.';
+          errorEl.textContent = 'Name and URL are required.';
           errorEl.hidden = false;
         }
         return;
