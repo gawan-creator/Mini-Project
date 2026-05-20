@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Timer Unit Tests — Life Dashboard</title>
+  <style>
+    body { font-family: monospace; padding: 2rem; background: #1e1e1e; color: #d4d4d4; }
+    h1 { color: #569cd6; }
+    h2 { color: #9cdcfe; margin-top: 1.5rem; }
+    .pass { color: #4ec9b0; }
+    .fail { color: #f44747; }
+    .summary { margin-top: 2rem; font-size: 1.2rem; font-weight: bold; border-top: 1px solid #444; padding-top: 1rem; }
+    .summary.all-pass { color: #4ec9b0; }
+    .summary.has-fail { color: #f44747; }
+  </style>
+</head>
+<body>
+  <h1>Timer Unit Tests — Life Dashboard</h1>
+  <!-- Elemen DOM yang dibutuhkan Timer -->
+  <p id="timer-display" style="display:none">25:00</p>
+  <button id="timer-start-btn" style="display:none">Mulai</button>
+  <button id="timer-stop-btn"  style="display:none">Berhenti</button>
+  <button id="timer-reset-btn" style="display:none">Reset</button>
+
+  <div id="output"></div>
+
+  <script>
+    'use strict';
+
+    // ─────────────────────────────────────────────
+    // Timer module — disalin dari app.js untuk pengujian terisolasi
+    // ─────────────────────────────────────────────
+    var Timer = (function () {
+      var _remaining = 1500;
+      var _intervalId = null;
+      var _notifyCalled = false; // flag untuk test
+
+      function _render() {
+        var el = document.getElementById('timer-display');
+        if (!el) return;
+        var minutes = Math.floor(_remaining / 60);
+        var seconds = _remaining % 60;
+        el.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+      }
+
+      function _notify() {
+        try {
+          _notifyCalled = true;
+          // Tidak memanggil alert() dalam test agar tidak memblokir
+        } catch (e) { /* diabaikan */ }
+      }
+
+      function _stop() {
+        clearInterval(_intervalId);
+        _intervalId = null;
+      }
+
+      function _tick() {
+        if (_remaining > 0) {
+          _remaining -= 1;
+        }
+        _render();
+        if (_remaining === 0) {
+          _stop();
+          _notify();
+        }
+      }
+
+      function _start() {
+        if (_intervalId !== null) return;
+        _intervalId = setInterval(_tick, 1000);
+      }
+
+      function _reset() {
+        _stop();
+        _remaining = 1500;
+        _render();
+      }
+
+      // Akses internal untuk testing
+      function _getRemaining()    { return _remaining; }
+      function _getIntervalId()   { return _intervalId; }
+      function _getNotifyCalled() { return _notifyCalled; }
+      function _setRemaining(v)   { _remaining = v; }
+      function _resetNotify()     { _notifyCalled = false; }
+
+      return {
+        _start: _start,
+        _stop: _stop,
+        _reset: _reset,
+        _tick: _tick,
+        _render: _render,
+        _getRemaining: _getRemaining,
+        _getIntervalId: _getIntervalId,
+        _getNotifyCalled: _getNotifyCalled,
+        _setRemaining: _setRemaining,
+        _resetNotify: _resetNotify
+      };
+    })();
+
+    // ─────────────────────────────────────────────
+    // Test runner
+    // ─────────────────────────────────────────────
+    var passed = 0;
+    var failed = 0;
+    var output = document.getElementById('output');
+
+    function assert(condition, message) {
+      var el = document.createElement('div');
+      if (condition) {
+        el.className = 'pass';
+        el.textContent = '  ✓ ' + message;
+        passed++;
+      } else {
+        el.className = 'fail';
+        el.textContent = '  ✗ ' + message;
+        failed++;
+      }
+      output.appendChild(el);
+    }
+
+    function describe(suiteName, fn) {
+      var h2 = document.createElement('h2');
+      h2.textContent = suiteName;
+      output.appendChild(h2);
+      fn();
+    }
+
+    // ─────────────────────────────────────────────
+    // Test Suite 1: Nilai default
+    // ─────────────────────────────────────────────
+    describe('Nilai default Timer', function () {
+      assert(
+        Timer._getRemaining() === 1500,
+        '_remaining default adalah 1500 (25 × 60 detik)'
+      );
+      assert(
+        Timer._getIntervalId() === null,
+        '_intervalId default adalah null (timer tidak berjalan)'
+      );
+
+      // Render awal harus menampilkan "25:00"
+      Timer._render();
+      var display = document.getElementById('timer-display');
+      assert(
+        display.textContent === '25:00',
+        '_render() menampilkan "25:00" saat _remaining = 1500'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 2: _render() — format MM:SS
+    // ─────────────────────────────────────────────
+    describe('_render() — format MM:SS', function () {
+      Timer._setRemaining(1500);
+      Timer._render();
+      assert(
+        document.getElementById('timer-display').textContent === '25:00',
+        '1500 detik → "25:00"'
+      );
+
+      Timer._setRemaining(90);
+      Timer._render();
+      assert(
+        document.getElementById('timer-display').textContent === '01:30',
+        '90 detik → "01:30"'
+      );
+
+      Timer._setRemaining(0);
+      Timer._render();
+      assert(
+        document.getElementById('timer-display').textContent === '00:00',
+        '0 detik → "00:00"'
+      );
+
+      Timer._setRemaining(61);
+      Timer._render();
+      assert(
+        document.getElementById('timer-display').textContent === '01:01',
+        '61 detik → "01:01"'
+      );
+
+      // Reset ke 1500 untuk test berikutnya
+      Timer._setRemaining(1500);
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 3: _tick() — countdown dan _remaining tidak pernah negatif
+    // ─────────────────────────────────────────────
+    describe('_tick() — countdown dan _remaining tidak pernah negatif', function () {
+      Timer._setRemaining(5);
+      Timer._tick();
+      assert(
+        Timer._getRemaining() === 4,
+        '_tick() mengurangi _remaining sebesar 1 (5 → 4)'
+      );
+
+      Timer._setRemaining(1);
+      Timer._tick();
+      assert(
+        Timer._getRemaining() === 0,
+        '_tick() dari 1 → 0'
+      );
+
+      // Tick lagi saat sudah 0 — tidak boleh negatif
+      Timer._setRemaining(0);
+      Timer._tick();
+      assert(
+        Timer._getRemaining() === 0,
+        '_remaining tidak pernah negatif (tetap 0 setelah tick dari 0)'
+      );
+
+      Timer._setRemaining(1500);
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 4: _stop() — pause tanpa reset
+    // ─────────────────────────────────────────────
+    describe('_stop() — pause tanpa reset', function () {
+      Timer._setRemaining(300);
+      Timer._start();
+      assert(
+        Timer._getIntervalId() !== null,
+        '_start() menyetel _intervalId (timer berjalan)'
+      );
+
+      Timer._stop();
+      assert(
+        Timer._getIntervalId() === null,
+        '_stop() menghapus _intervalId (timer berhenti)'
+      );
+      assert(
+        Timer._getRemaining() === 300,
+        '_stop() tidak mereset _remaining (tetap 300)'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 5: _reset() — kembalikan ke 25:00
+    // ─────────────────────────────────────────────
+    describe('_reset() — kembalikan ke 25:00', function () {
+      Timer._setRemaining(500);
+      Timer._start();
+      Timer._reset();
+
+      assert(
+        Timer._getRemaining() === 1500,
+        '_reset() mengembalikan _remaining ke 1500'
+      );
+      assert(
+        Timer._getIntervalId() === null,
+        '_reset() menghentikan interval (_intervalId = null)'
+      );
+      assert(
+        document.getElementById('timer-display').textContent === '25:00',
+        '_reset() memperbarui tampilan ke "25:00"'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 6: _start() — cegah duplikasi interval
+    // ─────────────────────────────────────────────
+    describe('_start() — cegah duplikasi interval', function () {
+      Timer._reset();
+      Timer._start();
+      var firstId = Timer._getIntervalId();
+      Timer._start(); // panggil lagi — harus diabaikan
+      var secondId = Timer._getIntervalId();
+
+      assert(
+        firstId !== null,
+        '_start() pertama menyetel _intervalId'
+      );
+      assert(
+        firstId === secondId,
+        '_start() kedua tidak membuat interval baru (ID sama)'
+      );
+
+      Timer._stop();
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 7: _notify() dipanggil saat mencapai 00:00
+    // ─────────────────────────────────────────────
+    describe('_notify() dipanggil saat _remaining mencapai 0', function () {
+      Timer._resetNotify();
+      Timer._setRemaining(1);
+      Timer._tick(); // _remaining → 0, harus memanggil _notify()
+
+      assert(
+        Timer._getNotifyCalled() === true,
+        '_notify() dipanggil saat _remaining mencapai 0'
+      );
+      assert(
+        Timer._getIntervalId() === null,
+        '_stop() dipanggil otomatis saat _remaining mencapai 0'
+      );
+
+      Timer._setRemaining(1500);
+    });
+
+    // ─────────────────────────────────────────────
+    // Summary
+    // ─────────────────────────────────────────────
+    var summary = document.createElement('div');
+    summary.className = 'summary ' + (failed === 0 ? 'all-pass' : 'has-fail');
+    summary.textContent = 'Hasil: ' + passed + ' passed, ' + failed + ' failed';
+    output.appendChild(summary);
+  </script>
+</body>
+</html>

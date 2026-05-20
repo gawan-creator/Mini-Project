@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Links Unit Tests — Life Dashboard</title>
+  <style>
+    body { font-family: monospace; padding: 2rem; background: #1e1e1e; color: #d4d4d4; }
+    h1 { color: #569cd6; }
+    h2 { color: #9cdcfe; margin-top: 1.5rem; }
+    .pass { color: #4ec9b0; }
+    .fail { color: #f44747; }
+    .summary { margin-top: 2rem; font-size: 1.2rem; font-weight: bold; border-top: 1px solid #444; padding-top: 1rem; }
+    .summary.all-pass { color: #4ec9b0; }
+    .summary.has-fail { color: #f44747; }
+  </style>
+</head>
+<body>
+  <h1>Links Unit Tests — Life Dashboard</h1>
+  <!-- Elemen DOM yang dibutuhkan Links -->
+  <ul id="links-list" style="display:none"></ul>
+  <p id="links-error" hidden></p>
+
+  <div id="output"></div>
+
+  <script>
+    'use strict';
+
+    // ─────────────────────────────────────────────
+    // Mock localStorage
+    // ─────────────────────────────────────────────
+    var _mockStorage = {};
+    var mockLocalStorage = {
+      getItem: function (key) {
+        return Object.prototype.hasOwnProperty.call(_mockStorage, key) ? _mockStorage[key] : null;
+      },
+      setItem: function (key, value) {
+        _mockStorage[key] = String(value);
+      },
+      removeItem: function (key) {
+        delete _mockStorage[key];
+      },
+      clear: function () {
+        _mockStorage = {};
+      }
+    };
+
+    // ─────────────────────────────────────────────
+    // Storage utility (disalin dari app.js)
+    // ─────────────────────────────────────────────
+    var Storage = {
+      get: function (key, fallback) {
+        try {
+          var raw = mockLocalStorage.getItem(key);
+          if (raw === null) return fallback;
+          return JSON.parse(raw);
+        } catch (e) {
+          return fallback;
+        }
+      },
+      set: function (key, value) {
+        try {
+          mockLocalStorage.setItem(key, JSON.stringify(value));
+        } catch (e) { /* diabaikan */ }
+      }
+    };
+
+    // ─────────────────────────────────────────────
+    // Links module — disalin dari app.js untuk pengujian terisolasi
+    // ─────────────────────────────────────────────
+    var Links = {
+      _links: [],
+
+      _generateId: function () {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+          return crypto.randomUUID();
+        }
+        return Date.now().toString() + Math.random().toString(36).slice(2);
+      },
+
+      _load: function () {
+        this._links = Storage.get('lifedash_links', []);
+      },
+
+      _save: function () {
+        Storage.set('lifedash_links', this._links);
+      },
+
+      _render: function () {
+        var list = document.getElementById('links-list');
+        if (!list) return;
+        list.innerHTML = '';
+        for (var i = 0; i < this._links.length; i++) {
+          var link = this._links[i];
+          var li = document.createElement('li');
+          li.setAttribute('data-id', link.id);
+          var a = document.createElement('a');
+          a.href = link.url;
+          a.textContent = link.name;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          var deleteBtn = document.createElement('button');
+          deleteBtn.setAttribute('data-action', 'delete');
+          li.appendChild(a);
+          li.appendChild(deleteBtn);
+          list.appendChild(li);
+        }
+      },
+
+      _addLink: function (name, url) {
+        var errorEl = document.getElementById('links-error');
+        if (name.trim().length === 0 || url.trim().length === 0) {
+          if (errorEl) { errorEl.textContent = 'Nama dan URL wajib diisi.'; errorEl.hidden = false; }
+          return;
+        }
+        if (errorEl) { errorEl.textContent = ''; errorEl.hidden = true; }
+        var newLink = {
+          id:   this._generateId(),
+          name: name.trim(),
+          url:  this._normalizeUrl(url.trim())
+        };
+        this._links.push(newLink);
+        this._save();
+        this._render();
+      },
+
+      _deleteLink: function (id) {
+        this._links = this._links.filter(function (link) { return link.id !== id; });
+        this._save();
+        this._render();
+      },
+
+      _normalizeUrl: function (url) {
+        if (url.indexOf('http://') === 0 || url.indexOf('https://') === 0) {
+          return url;
+        }
+        return 'https://' + url;
+      }
+    };
+
+    // ─────────────────────────────────────────────
+    // Test runner
+    // ─────────────────────────────────────────────
+    var passed = 0;
+    var failed = 0;
+    var output = document.getElementById('output');
+
+    function assert(condition, message) {
+      var el = document.createElement('div');
+      if (condition) {
+        el.className = 'pass';
+        el.textContent = '  ✓ ' + message;
+        passed++;
+      } else {
+        el.className = 'fail';
+        el.textContent = '  ✗ ' + message;
+        failed++;
+      }
+      output.appendChild(el);
+    }
+
+    function describe(suiteName, fn) {
+      var h2 = document.createElement('h2');
+      h2.textContent = suiteName;
+      output.appendChild(h2);
+      fn();
+    }
+
+    function resetLinks() {
+      Links._links = [];
+      mockLocalStorage.clear();
+      document.getElementById('links-list').innerHTML = '';
+      var errorEl = document.getElementById('links-error');
+      errorEl.textContent = '';
+      errorEl.hidden = true;
+    }
+
+    // ─────────────────────────────────────────────
+    // Test Suite 1: _normalizeUrl
+    // ─────────────────────────────────────────────
+    describe('_normalizeUrl — normalisasi URL', function () {
+      assert(
+        Links._normalizeUrl('github.com') === 'https://github.com',
+        'URL tanpa protokol → ditambahkan "https://"'
+      );
+      assert(
+        Links._normalizeUrl('www.google.com') === 'https://www.google.com',
+        '"www.google.com" → "https://www.google.com"'
+      );
+      assert(
+        Links._normalizeUrl('https://github.com') === 'https://github.com',
+        'URL dengan "https://" tidak dimodifikasi'
+      );
+      assert(
+        Links._normalizeUrl('http://example.com') === 'http://example.com',
+        'URL dengan "http://" tidak dimodifikasi'
+      );
+      assert(
+        Links._normalizeUrl('https://sub.domain.co.id/path?q=1') === 'https://sub.domain.co.id/path?q=1',
+        'URL https:// kompleks tidak dimodifikasi'
+      );
+      assert(
+        Links._normalizeUrl('ftp://files.example.com').indexOf('https://') === 0,
+        'URL dengan protokol lain (ftp://) → ditambahkan "https://"'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 2: _addLink — penambahan valid
+    // ─────────────────────────────────────────────
+    describe('_addLink — penambahan tautan valid', function () {
+      resetLinks();
+
+      Links._addLink('GitHub', 'https://github.com');
+      assert(Links._links.length === 1, 'setelah _addLink, panjang daftar bertambah 1');
+      assert(Links._links[0].name === 'GitHub', 'nama tautan tersimpan dengan benar');
+      assert(Links._links[0].url === 'https://github.com', 'URL tersimpan dengan benar');
+      assert(typeof Links._links[0].id === 'string' && Links._links[0].id.length > 0, 'id dihasilkan (string non-kosong)');
+
+      Links._addLink('MDN', 'developer.mozilla.org');
+      assert(Links._links.length === 2, 'penambahan kedua → panjang daftar = 2');
+      assert(Links._links[1].url === 'https://developer.mozilla.org', 'URL tanpa protokol dinormalisasi ke https://');
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 3: _addLink — penolakan input kosong
+    // ─────────────────────────────────────────────
+    describe('_addLink — penolakan nama/URL kosong', function () {
+      resetLinks();
+
+      Links._addLink('', 'https://github.com');
+      assert(Links._links.length === 0, 'nama kosong → ditolak, daftar tidak berubah');
+
+      Links._addLink('GitHub', '');
+      assert(Links._links.length === 0, 'URL kosong → ditolak, daftar tidak berubah');
+
+      Links._addLink('', '');
+      assert(Links._links.length === 0, 'nama dan URL kosong → ditolak, daftar tidak berubah');
+
+      Links._addLink('   ', 'https://github.com');
+      assert(Links._links.length === 0, 'nama whitespace-only → ditolak');
+
+      Links._addLink('GitHub', '   ');
+      assert(Links._links.length === 0, 'URL whitespace-only → ditolak');
+
+      // Verifikasi pesan error ditampilkan
+      Links._addLink('', 'https://github.com');
+      var errorEl = document.getElementById('links-error');
+      assert(
+        errorEl.hidden === false && errorEl.textContent.length > 0,
+        'pesan error ditampilkan saat input tidak valid'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 4: _deleteLink — penghapusan permanen
+    // ─────────────────────────────────────────────
+    describe('_deleteLink — penghapusan permanen', function () {
+      resetLinks();
+
+      Links._addLink('GitHub', 'https://github.com');
+      Links._addLink('MDN', 'https://developer.mozilla.org');
+      assert(Links._links.length === 2, 'setup: 2 tautan ditambahkan');
+
+      var idToDelete = Links._links[0].id;
+      Links._deleteLink(idToDelete);
+
+      assert(Links._links.length === 1, 'setelah _deleteLink, panjang berkurang 1');
+      assert(
+        Links._links.every(function (l) { return l.id !== idToDelete; }),
+        'tautan yang dihapus tidak ada lagi dalam daftar'
+      );
+      assert(Links._links[0].name === 'MDN', 'tautan yang tersisa masih ada');
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 5: Persistensi ke localStorage
+    // ─────────────────────────────────────────────
+    describe('Persistensi ke localStorage', function () {
+      resetLinks();
+
+      Links._addLink('GitHub', 'https://github.com');
+      var stored = JSON.parse(mockLocalStorage.getItem('lifedash_links'));
+      assert(
+        Array.isArray(stored) && stored.length === 1,
+        '_addLink menyimpan ke localStorage (1 item)'
+      );
+      assert(
+        stored[0].name === 'GitHub',
+        'data tersimpan di localStorage identik dengan _links'
+      );
+
+      Links._addLink('MDN', 'https://developer.mozilla.org');
+      stored = JSON.parse(mockLocalStorage.getItem('lifedash_links'));
+      assert(stored.length === 2, 'setelah tambah kedua, localStorage berisi 2 item');
+
+      var idToDelete = Links._links[0].id;
+      Links._deleteLink(idToDelete);
+      stored = JSON.parse(mockLocalStorage.getItem('lifedash_links'));
+      assert(stored.length === 1, 'setelah _deleteLink, localStorage berisi 1 item');
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 6: _load() — pemulihan dari localStorage
+    // ─────────────────────────────────────────────
+    describe('_load() — pemulihan dari localStorage', function () {
+      resetLinks();
+
+      // Simpan data langsung ke mock localStorage
+      var testData = [
+        { id: 'test-1', name: 'GitHub', url: 'https://github.com' },
+        { id: 'test-2', name: 'MDN',    url: 'https://developer.mozilla.org' }
+      ];
+      mockLocalStorage.setItem('lifedash_links', JSON.stringify(testData));
+
+      Links._load();
+      assert(Links._links.length === 2, '_load() memulihkan 2 tautan dari localStorage');
+      assert(Links._links[0].name === 'GitHub', 'tautan pertama dipulihkan dengan benar');
+      assert(Links._links[1].url === 'https://developer.mozilla.org', 'URL tautan kedua dipulihkan dengan benar');
+
+      // _load() pada localStorage kosong → array kosong
+      mockLocalStorage.clear();
+      Links._load();
+      assert(Links._links.length === 0, '_load() pada localStorage kosong → array kosong');
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 7: _render() — DOM output
+    // ─────────────────────────────────────────────
+    describe('_render() — output DOM', function () {
+      resetLinks();
+
+      Links._addLink('GitHub', 'https://github.com');
+      Links._addLink('MDN', 'https://developer.mozilla.org');
+
+      var list = document.getElementById('links-list');
+      var items = list.querySelectorAll('li[data-id]');
+      assert(items.length === 2, '_render() menghasilkan 2 elemen <li> dengan data-id');
+
+      var anchors = list.querySelectorAll('a');
+      assert(anchors.length === 2, 'setiap item memiliki elemen <a>');
+      assert(anchors[0].target === '_blank', 'link dibuka di tab baru (target="_blank")');
+      assert(anchors[0].rel === 'noopener noreferrer', 'rel="noopener noreferrer" terpasang');
+    });
+
+    // ─────────────────────────────────────────────
+    // Summary
+    // ─────────────────────────────────────────────
+    var summary = document.createElement('div');
+    summary.className = 'summary ' + (failed === 0 ? 'all-pass' : 'has-fail');
+    summary.textContent = 'Hasil: ' + passed + ' passed, ' + failed + ' failed';
+    output.appendChild(summary);
+  </script>
+</body>
+</html>

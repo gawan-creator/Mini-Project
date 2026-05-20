@@ -333,67 +333,179 @@ var LifeDashboard = (function () {
      * Melakukan render awal dan memasang event listener tombol.
      */
     init: function () {
-      // Implementasi lengkap akan ditambahkan di Task 5
+      var self = this;
+      self._render();
+
+      var startBtn = document.getElementById('timer-start-btn');
+      var stopBtn  = document.getElementById('timer-stop-btn');
+      var resetBtn = document.getElementById('timer-reset-btn');
+
+      if (startBtn) startBtn.addEventListener('click', function () { self._start(); });
+      if (stopBtn)  stopBtn.addEventListener('click',  function () { self._stop(); });
+      if (resetBtn) resetBtn.addEventListener('click', function () { self._reset(); });
     },
 
     /** Mulai interval jika belum berjalan. */
     _start: function () {
-      // Implementasi lengkap akan ditambahkan di Task 5
+      if (this._intervalId !== null) return;
+      var self = this;
+      this._intervalId = setInterval(function () {
+        self._tick();
+      }, 1000);
     },
 
     /** Hentikan interval (pause tanpa reset). */
     _stop: function () {
-      // Implementasi lengkap akan ditambahkan di Task 5
+      clearInterval(this._intervalId);
+      this._intervalId = null;
     },
 
     /** Hentikan interval dan kembalikan _remaining ke 1500. */
     _reset: function () {
-      // Implementasi lengkap akan ditambahkan di Task 5
+      this._stop();
+      this._remaining = 1500;
+      this._render();
     },
 
     /** Kurangi _remaining, render, cek selesai. */
     _tick: function () {
-      // Implementasi lengkap akan ditambahkan di Task 5
+      if (this._remaining > 0) {
+        this._remaining -= 1;
+      }
+      this._render();
+      if (this._remaining === 0) {
+        this._stop();
+        this._notify();
+      }
     },
 
     /** Update teks #timer-display. */
     _render: function () {
-      // Implementasi lengkap akan ditambahkan di Task 5
+      var el = document.getElementById('timer-display');
+      if (!el) return;
+      var minutes = Math.floor(this._remaining / 60);
+      var seconds = this._remaining % 60;
+      el.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
     },
 
     /** Tampilkan notifikasi sesi selesai. */
     _notify: function () {
-      // Implementasi lengkap akan ditambahkan di Task 5
+      try {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification('Life Dashboard', { body: 'Sesi fokus selesai! Waktunya istirahat.' });
+        } else {
+          alert('Sesi fokus selesai! Waktunya istirahat.');
+        }
+      } catch (e) {
+        // Kegagalan notifikasi diabaikan secara diam-diam
+      }
     }
   };
 
   // ─────────────────────────────────────────────
   // Links — modul manajemen tautan cepat
   // ─────────────────────────────────────────────
+
+  /**
+   * @typedef {Object} Link
+   * @property {string} id   - Unique identifier
+   * @property {string} name - Nama tampilan (tidak boleh kosong)
+   * @property {string} url  - URL lengkap dengan protokol (selalu diawali http:// atau https://)
+   */
+
   var Links = {
-    /** @type {Array<{id: string, name: string, url: string}>} */
+    /** @type {Array<Link>} */
     _links: [],
+
+    /**
+     * Menghasilkan ID unik menggunakan crypto.randomUUID() jika tersedia,
+     * dengan fallback ke kombinasi Date.now() dan Math.random().
+     * @returns {string} ID unik
+     */
+    _generateId: function () {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+      }
+      return Date.now().toString() + Math.random().toString(36).slice(2);
+    },
 
     /**
      * Memuat data dari localStorage, melakukan render, dan memasang event listener.
      */
     init: function () {
-      // Implementasi lengkap akan ditambahkan di Task 6
+      var self = this;
+      self._load();
+      self._render();
+
+      var nameInput = document.getElementById('links-name-input');
+      var urlInput  = document.getElementById('links-url-input');
+      var addBtn    = document.getElementById('links-add-btn');
+      var list      = document.getElementById('links-list');
+
+      // Tombol simpan
+      if (addBtn) {
+        addBtn.addEventListener('click', function () {
+          self._addLink(nameInput ? nameInput.value : '', urlInput ? urlInput.value : '');
+          if (nameInput) nameInput.value = '';
+          if (urlInput)  urlInput.value  = '';
+        });
+      }
+
+      // Event delegation pada <ul> untuk delete
+      if (list) {
+        list.addEventListener('click', function (event) {
+          var actionEl = event.target.closest('[data-action]');
+          var itemEl   = event.target.closest('[data-id]');
+          if (!actionEl || !itemEl) return;
+          if (actionEl.getAttribute('data-action') === 'delete') {
+            self._deleteLink(itemEl.getAttribute('data-id'));
+          }
+        });
+      }
     },
 
     /** Membaca array tautan dari Storage dan mengisi _links. */
     _load: function () {
-      // Implementasi lengkap akan ditambahkan di Task 6
+      this._links = Storage.get('lifedash_links', []);
     },
 
     /** Menulis _links ke Storage. */
     _save: function () {
-      // Implementasi lengkap akan ditambahkan di Task 6
+      Storage.set('lifedash_links', this._links);
     },
 
     /** Render ulang seluruh <ul id="links-list">. */
     _render: function () {
-      // Implementasi lengkap akan ditambahkan di Task 6
+      var list = document.getElementById('links-list');
+      if (!list) return;
+
+      list.innerHTML = '';
+
+      for (var i = 0; i < this._links.length; i++) {
+        var link = this._links[i];
+
+        var li = document.createElement('li');
+        li.setAttribute('data-id', link.id);
+        li.className = 'links__item';
+
+        var a = document.createElement('a');
+        a.href = link.url;
+        a.textContent = link.name;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.className = 'links__anchor';
+
+        var deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.setAttribute('data-action', 'delete');
+        deleteBtn.className = 'links__btn links__btn--delete';
+        deleteBtn.textContent = 'Hapus';
+        deleteBtn.setAttribute('aria-label', 'Hapus tautan ' + link.name);
+
+        li.appendChild(a);
+        li.appendChild(deleteBtn);
+        list.appendChild(li);
+      }
     },
 
     /**
@@ -402,7 +514,30 @@ var LifeDashboard = (function () {
      * @param {string} url
      */
     _addLink: function (name, url) {
-      // Implementasi lengkap akan ditambahkan di Task 6
+      var errorEl = document.getElementById('links-error');
+
+      if (name.trim().length === 0 || url.trim().length === 0) {
+        if (errorEl) {
+          errorEl.textContent = 'Nama dan URL wajib diisi.';
+          errorEl.hidden = false;
+        }
+        return;
+      }
+
+      // Sembunyikan pesan error jika ada
+      if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.hidden = true;
+      }
+
+      var newLink = {
+        id:   this._generateId(),
+        name: name.trim(),
+        url:  this._normalizeUrl(url.trim())
+      };
+      this._links.push(newLink);
+      this._save();
+      this._render();
     },
 
     /**
@@ -410,7 +545,11 @@ var LifeDashboard = (function () {
      * @param {string} id
      */
     _deleteLink: function (id) {
-      // Implementasi lengkap akan ditambahkan di Task 6
+      this._links = this._links.filter(function (link) {
+        return link.id !== id;
+      });
+      this._save();
+      this._render();
     },
 
     /**
@@ -419,7 +558,10 @@ var LifeDashboard = (function () {
      * @returns {string}
      */
     _normalizeUrl: function (url) {
-      // Implementasi lengkap akan ditambahkan di Task 6
+      if (url.indexOf('http://') === 0 || url.indexOf('https://') === 0) {
+        return url;
+      }
+      return 'https://' + url;
     }
   };
 
@@ -435,3 +577,13 @@ var LifeDashboard = (function () {
   };
 
 }());
+
+// ─────────────────────────────────────────────
+// Inisialisasi — jalankan semua modul setelah DOM siap
+// ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+  LifeDashboard.Clock.init();
+  LifeDashboard.Todo.init();
+  LifeDashboard.Timer.init();
+  LifeDashboard.Links.init();
+});

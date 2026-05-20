@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Life Dashboard</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main class="dashboard">
+
+    <!-- Komponen 1: Jam & Sapaan -->
+    <section class="card card--clock" id="clock-section">
+      <p class="clock__greeting" id="clock-greeting"></p>
+      <p class="clock__time"     id="clock-time"></p>
+      <p class="clock__date"     id="clock-date"></p>
+    </section>
+
+    <!-- Komponen 2: To-Do List -->
+    <section class="card card--todo" id="todo-section">
+      <h2 class="card__title">Tugas Hari Ini</h2>
+      <div class="todo__input-row">
+        <input type="text" id="todo-input" placeholder="Tambah tugas baru…" aria-label="Tambah tugas baru" />
+        <button id="todo-add-btn" type="button">Tambah</button>
+      </div>
+      <ul class="todo__list" id="todo-list" aria-label="Daftar tugas"></ul>
+    </section>
+
+    <!-- Komponen 3: Focus Timer -->
+    <section class="card card--timer" id="timer-section">
+      <h2 class="card__title">Focus Timer</h2>
+      <p class="timer__display" id="timer-display" aria-live="polite" aria-label="Waktu tersisa">25:00</p>
+      <div class="timer__controls">
+        <button id="timer-start-btn" type="button">Mulai</button>
+        <button id="timer-stop-btn"  type="button">Berhenti</button>
+        <button id="timer-reset-btn" type="button">Reset</button>
+      </div>
+    </section>
+
+    <!-- Komponen 4: Quick Links -->
+    <section class="card card--links" id="links-section">
+      <h2 class="card__title">Tautan Cepat</h2>
+      <div class="links__input-row">
+        <input type="text" id="links-name-input" placeholder="Nama situs…"  aria-label="Nama situs" />
+        <input type="url"  id="links-url-input"  placeholder="https://…"    aria-label="URL situs" />
+        <button id="links-add-btn" type="button">Simpan</button>
+      </div>
+      <p class="links__error" id="links-error" hidden aria-live="polite"></p>
+      <ul class="links__list" id="links-list" aria-label="Daftar tautan cepat"></ul>
+    </section>
+
+  </main>
+  <script src="js/app.js"></script>
+</body>
+</html>
