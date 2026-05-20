@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Storage Unit Tests — Life Dashboard</title>
+  <style>
+    body { font-family: monospace; padding: 2rem; background: #1e1e1e; color: #d4d4d4; }
+    h1 { color: #569cd6; }
+    h2 { color: #9cdcfe; margin-top: 1.5rem; }
+    .pass { color: #4ec9b0; }
+    .fail { color: #f44747; }
+    .summary { margin-top: 2rem; font-size: 1.2rem; font-weight: bold; border-top: 1px solid #444; padding-top: 1rem; }
+    .summary.all-pass { color: #4ec9b0; }
+    .summary.has-fail { color: #f44747; }
+  </style>
+</head>
+<body>
+  <h1>Storage Unit Tests — Life Dashboard</h1>
+  <div id="output"></div>
+
+  <script>
+    'use strict';
+
+    // ─────────────────────────────────────────────
+    // Mock localStorage (untuk isolasi test)
+    // ─────────────────────────────────────────────
+    function createMockLocalStorage() {
+      var store = {};
+      return {
+        getItem: function (key) {
+          return Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null;
+        },
+        setItem: function (key, value) {
+          store[key] = String(value);
+        },
+        removeItem: function (key) {
+          delete store[key];
+        },
+        clear: function () {
+          store = {};
+        }
+      };
+    }
+
+    // ─────────────────────────────────────────────
+    // Storage module (sama persis dengan js/app.js)
+    // ─────────────────────────────────────────────
+    function createStorage(ls) {
+      return {
+        get: function (key, fallback) {
+          try {
+            var raw = ls.getItem(key);
+            if (raw === null) return fallback;
+            return JSON.parse(raw);
+          } catch (e) {
+            return fallback;
+          }
+        },
+        set: function (key, value) {
+          try {
+            ls.setItem(key, JSON.stringify(value));
+          } catch (e) {
+            // Kegagalan diabaikan secara diam-diam
+          }
+        }
+      };
+    }
+
+    // ─────────────────────────────────────────────
+    // Test runner
+    // ─────────────────────────────────────────────
+    var passed = 0;
+    var failed = 0;
+    var output = document.getElementById('output');
+
+    function deepEqual(a, b) {
+      return JSON.stringify(a) === JSON.stringify(b);
+    }
+
+    function assert(condition, message) {
+      var el = document.createElement('div');
+      if (condition) {
+        el.className = 'pass';
+        el.textContent = '  ✓ ' + message;
+        passed++;
+      } else {
+        el.className = 'fail';
+        el.textContent = '  ✗ ' + message;
+        failed++;
+      }
+      output.appendChild(el);
+    }
+
+    function describe(suiteName, fn) {
+      var h2 = document.createElement('h2');
+      h2.textContent = suiteName;
+      output.appendChild(h2);
+      fn();
+    }
+
+    // ─────────────────────────────────────────────
+    // Test Suite 1: Storage.get — key tidak ada
+    // ─────────────────────────────────────────────
+    describe('Storage.get — key tidak ada', function () {
+      var ls = createMockLocalStorage();
+      var Storage = createStorage(ls);
+
+      assert(
+        Storage.get('nonexistent_key', 'default_value') === 'default_value',
+        'mengembalikan fallback string jika key tidak ada'
+      );
+      assert(
+        Storage.get('another_missing_key', 42) === 42,
+        'mengembalikan fallback number jika key tidak ada'
+      );
+      assert(
+        deepEqual(Storage.get('missing_array_key', []), []),
+        'mengembalikan fallback array kosong jika key tidak ada'
+      );
+      assert(
+        Storage.get('missing_null_fallback', null) === null,
+        'mengembalikan fallback null jika key tidak ada'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 2: Storage.get — data valid
+    // ─────────────────────────────────────────────
+    describe('Storage.get — data valid (valid JSON)', function () {
+      var ls = createMockLocalStorage();
+      var Storage = createStorage(ls);
+
+      ls.setItem('test_string', JSON.stringify('hello'));
+      ls.setItem('test_number', JSON.stringify(123));
+      ls.setItem('test_array', JSON.stringify([1, 2, 3]));
+      ls.setItem('test_object', JSON.stringify({ a: 1, b: 'two' }));
+      ls.setItem('test_boolean', JSON.stringify(true));
+
+      assert(
+        Storage.get('test_string', null) === 'hello',
+        'mem-parse string JSON dengan benar'
+      );
+      assert(
+        Storage.get('test_number', null) === 123,
+        'mem-parse number JSON dengan benar'
+      );
+      assert(
+        deepEqual(Storage.get('test_array', null), [1, 2, 3]),
+        'mem-parse array JSON dengan benar'
+      );
+      assert(
+        deepEqual(Storage.get('test_object', null), { a: 1, b: 'two' }),
+        'mem-parse object JSON dengan benar'
+      );
+      assert(
+        Storage.get('test_boolean', null) === true,
+        'mem-parse boolean JSON dengan benar'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 3: Storage.get — data rusak
+    // ─────────────────────────────────────────────
+    describe('Storage.get — data rusak (bukan JSON valid)', function () {
+      var ls = createMockLocalStorage();
+      var Storage = createStorage(ls);
+
+      ls.setItem('corrupt_1', 'ini bukan json');
+      ls.setItem('corrupt_2', '{key: value}');
+      ls.setItem('corrupt_3', '[1, 2, 3');
+      ls.setItem('corrupt_4', 'undefined');
+      ls.setItem('corrupt_5', '');
+
+      assert(
+        Storage.get('corrupt_1', 'fallback') === 'fallback',
+        'mengembalikan fallback untuk string acak bukan JSON'
+      );
+      assert(
+        Storage.get('corrupt_2', 'fallback') === 'fallback',
+        'mengembalikan fallback untuk object JSON tidak valid'
+      );
+      assert(
+        Storage.get('corrupt_3', 'fallback') === 'fallback',
+        'mengembalikan fallback untuk JSON terpotong'
+      );
+      assert(
+        Storage.get('corrupt_4', 'fallback') === 'fallback',
+        'mengembalikan fallback untuk string "undefined"'
+      );
+      assert(
+        Storage.get('corrupt_5', 'fallback') === 'fallback',
+        'mengembalikan fallback untuk string kosong'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 4: Storage.set — menyimpan data valid
+    // ─────────────────────────────────────────────
+    describe('Storage.set — menyimpan data valid ke localStorage', function () {
+      var ls = createMockLocalStorage();
+      var Storage = createStorage(ls);
+
+      Storage.set('save_string', 'world');
+      assert(
+        ls.getItem('save_string') === JSON.stringify('world'),
+        'menyimpan string sebagai JSON ke localStorage'
+      );
+
+      Storage.set('save_number', 99);
+      assert(
+        ls.getItem('save_number') === JSON.stringify(99),
+        'menyimpan number sebagai JSON ke localStorage'
+      );
+
+      Storage.set('save_array', [10, 20, 30]);
+      assert(
+        ls.getItem('save_array') === JSON.stringify([10, 20, 30]),
+        'menyimpan array sebagai JSON ke localStorage'
+      );
+
+      Storage.set('save_object', { x: 1, y: 2 });
+      assert(
+        ls.getItem('save_object') === JSON.stringify({ x: 1, y: 2 }),
+        'menyimpan object sebagai JSON ke localStorage'
+      );
+
+      Storage.set('roundtrip_key', { name: 'test', value: [1, 2] });
+      assert(
+        deepEqual(Storage.get('roundtrip_key', null), { name: 'test', value: [1, 2] }),
+        'round-trip set→get mengembalikan nilai asli'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 5: Storage.set — localStorage tidak tersedia
+    // ─────────────────────────────────────────────
+    describe('Storage.set — localStorage tidak tersedia (setItem throws)', function () {
+      var brokenLs = {
+        getItem: function (key) { return null; },
+        setItem: function (key, value) {
+          throw new Error('QuotaExceededError: localStorage tidak tersedia');
+        }
+      };
+      var Storage = createStorage(brokenLs);
+
+      var threw = false;
+      try {
+        Storage.set('any_key', 'any_value');
+      } catch (e) {
+        threw = true;
+      }
+
+      assert(
+        !threw,
+        'tidak melempar exception ketika localStorage.setItem gagal'
+      );
+
+      assert(
+        Storage.get('any_key', 'safe_fallback') === 'safe_fallback',
+        'Storage.get masih mengembalikan fallback setelah set gagal'
+      );
+
+      var allSilent = true;
+      try {
+        Storage.set('key1', 'val1');
+        Storage.set('key2', { data: [1, 2, 3] });
+        Storage.set('key3', true);
+      } catch (e) {
+        allSilent = false;
+      }
+
+      assert(
+        allSilent,
+        'beberapa panggilan Storage.set berturut-turut tidak melempar meski localStorage gagal'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Summary
+    // ─────────────────────────────────────────────
+    var summary = document.createElement('div');
+    summary.className = 'summary ' + (failed === 0 ? 'all-pass' : 'has-fail');
+    summary.textContent = 'Hasil: ' + passed + ' passed, ' + failed + ' failed';
+    output.appendChild(summary);
+  </script>
+</body>
+</html>

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clock Unit Tests — Life Dashboard</title>
+  <style>
+    body { font-family: monospace; padding: 2rem; background: #1e1e1e; color: #d4d4d4; }
+    h1 { color: #569cd6; }
+    h2 { color: #9cdcfe; margin-top: 1.5rem; }
+    .pass { color: #4ec9b0; }
+    .fail { color: #f44747; }
+    .summary { margin-top: 2rem; font-size: 1.2rem; font-weight: bold; border-top: 1px solid #444; padding-top: 1rem; }
+    .summary.all-pass { color: #4ec9b0; }
+    .summary.has-fail { color: #f44747; }
+  </style>
+</head>
+<body>
+  <h1>Clock Unit Tests — Life Dashboard</h1>
+  <div id="output"></div>
+
+  <script>
+    'use strict';
+
+    // ─────────────────────────────────────────────
+    // _formatTime — fungsi murni yang diuji
+    // (disalin dari Clock module di app.js)
+    // ─────────────────────────────────────────────
+    function _formatTime(date) {
+      var hh = String(date.getHours()).padStart(2, '0');
+      var mm = String(date.getMinutes()).padStart(2, '0');
+      var ss = String(date.getSeconds()).padStart(2, '0');
+      return hh + ':' + mm + ':' + ss;
+    }
+
+    // ─────────────────────────────────────────────
+    // _formatDate — fungsi murni yang diuji
+    // (disalin dari Clock module di app.js)
+    // ─────────────────────────────────────────────
+    function _formatDate(date) {
+      var days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      var months = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      , 'Desember'];
+      var dayName   = days[date.getDay()];
+      var dateNum   = date.getDate();
+      var monthName = months[date.getMonth()];
+      var year      = date.getFullYear();
+      return dayName + ', ' + dateNum + ' ' + monthName + ' ' + year;
+    }
+
+    // ─────────────────────────────────────────────
+    // Test runner
+    // ─────────────────────────────────────────────
+    var passed = 0;
+    var failed = 0;
+    var output = document.getElementById('output');
+
+    function assert(condition, message) {
+      var el = document.createElement('div');
+      if (condition) {
+        el.className = 'pass';
+        el.textContent = '  ✓ ' + message;
+        passed++;
+      } else {
+        el.className = 'fail';
+        el.textContent = '  ✗ ' + message;
+        failed++;
+      }
+      output.appendChild(el);
+    }
+
+    function describe(suiteName, fn) {
+      var h2 = document.createElement('h2');
+      h2.textContent = suiteName;
+      output.appendChild(h2);
+      fn();
+    }
+
+    // Helper: buat Date dengan jam/menit/detik tertentu
+    function makeDate(h, m, s) {
+      var d = new Date();
+      d.setHours(h, m, s, 0);
+      return d;
+    }
+
+    // ─────────────────────────────────────────────
+    // Test Suite 1: _formatTime — format dasar
+    // ─────────────────────────────────────────────
+    describe('_formatTime — format dasar "HH:MM:SS"', function () {
+      assert(
+        _formatTime(makeDate(9, 5, 3)) === '09:05:03',
+        '09:05:03 → "09:05:03" (zero-padding semua segmen)'
+      );
+      assert(
+        _formatTime(makeDate(14, 30, 0)) === '14:30:00',
+        '14:30:00 → "14:30:00" (detik nol di-pad)'
+      );
+      assert(
+        _formatTime(makeDate(0, 0, 0)) === '00:00:00',
+        '00:00:00 → "00:00:00" (tengah malam, semua nol)'
+      );
+      assert(
+        _formatTime(makeDate(23, 59, 59)) === '23:59:59',
+        '23:59:59 → "23:59:59" (nilai maksimum)'
+      );
+      assert(
+        _formatTime(makeDate(12, 0, 0)) === '12:00:00',
+        '12:00:00 → "12:00:00" (tengah hari)'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 2: _formatTime — zero-padding
+    // ─────────────────────────────────────────────
+    describe('_formatTime — zero-padding untuk nilai di bawah 10', function () {
+      assert(
+        _formatTime(makeDate(1, 2, 3)) === '01:02:03',
+        '1:2:3 → "01:02:03" (semua segmen di bawah 10 di-pad)'
+      );
+      assert(
+        _formatTime(makeDate(0, 9, 1)) === '00:09:01',
+        '0:9:1 → "00:09:01"'
+      );
+      assert(
+        _formatTime(makeDate(9, 0, 9)) === '09:00:09',
+        '9:0:9 → "09:00:09"'
+      );
+      assert(
+        _formatTime(makeDate(10, 10, 10)) === '10:10:10',
+        '10:10:10 → "10:10:10" (tidak ada padding untuk nilai ≥ 10)'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 3: _formatTime — format output
+    // ─────────────────────────────────────────────
+    describe('_formatTime — validasi format output', function () {
+      var timeRegex = /^\d{2}:\d{2}:\d{2}$/;
+
+      assert(
+        timeRegex.test(_formatTime(makeDate(9, 5, 3))),
+        'output cocok dengan pola /^\\d{2}:\\d{2}:\\d{2}$/ untuk 09:05:03'
+      );
+      assert(
+        timeRegex.test(_formatTime(makeDate(0, 0, 0))),
+        'output cocok dengan pola /^\\d{2}:\\d{2}:\\d{2}$/ untuk 00:00:00'
+      );
+      assert(
+        timeRegex.test(_formatTime(makeDate(23, 59, 59))),
+        'output cocok dengan pola /^\\d{2}:\\d{2}:\\d{2}$/ untuk 23:59:59'
+      );
+
+      var result = _formatTime(makeDate(9, 5, 3));
+      var parts = result.split(':');
+      assert(
+        parts.length === 3,
+        'output memiliki tepat 3 segmen yang dipisahkan oleh ":"'
+      );
+      assert(
+        parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 2,
+        'setiap segmen memiliki panjang tepat 2 karakter'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 4: _formatTime — nilai batas jam
+    // ─────────────────────────────────────────────
+    describe('_formatTime — nilai batas jam (0 dan 23)', function () {
+      assert(
+        _formatTime(makeDate(0, 0, 0)).startsWith('00'),
+        'jam 0 ditampilkan sebagai "00"'
+      );
+      assert(
+        _formatTime(makeDate(23, 0, 0)).startsWith('23'),
+        'jam 23 ditampilkan sebagai "23"'
+      );
+      assert(
+        _formatTime(makeDate(5, 0, 0)).startsWith('05'),
+        'jam 5 ditampilkan sebagai "05" (zero-padded)'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 5: _formatDate — format dasar
+    // ─────────────────────────────────────────────
+    describe('_formatDate — format "Hari, DD Bulan YYYY"', function () {
+      // Senin, 14 Juli 2025 — getDay()=1, getDate()=14, getMonth()=6, getFullYear()=2025
+      var monday14Jul2025 = new Date(2025, 6, 14);
+      assert(
+        _formatDate(monday14Jul2025) === 'Senin, 14 Juli 2025',
+        'Senin 14 Juli 2025 → "Senin, 14 Juli 2025"'
+      );
+
+      // Minggu, 1 Januari 2023 — getDay()=0, getDate()=1, getMonth()=0, getFullYear()=2023
+      var sunday1Jan2023 = new Date(2023, 0, 1);
+      assert(
+        _formatDate(sunday1Jan2023) === 'Minggu, 1 Januari 2023',
+        'Minggu 1 Januari 2023 → "Minggu, 1 Januari 2023"'
+      );
+
+      // Sabtu, 31 Desember 2022
+      var saturday31Dec2022 = new Date(2022, 11, 31);
+      assert(
+        _formatDate(saturday31Dec2022) === 'Sabtu, 31 Desember 2022',
+        'Sabtu 31 Desember 2022 → "Sabtu, 31 Desember 2022"'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 6: _formatDate — semua nama hari
+    // ─────────────────────────────────────────────
+    describe('_formatDate — semua nama hari Indonesia', function () {
+      var dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      // 2025-06-01 adalah Minggu (getDay()=0), sehingga +i hari = hari ke-i
+      var baseDate = new Date(2025, 5, 1); // 1 Juni 2025 = Minggu
+      for (var i = 0; i < 7; i++) {
+        var d = new Date(2025, 5, 1 + i);
+        var result = _formatDate(d);
+        assert(
+          result.startsWith(dayNames[i] + ','),
+          'Hari ke-' + i + ' dimulai dengan "' + dayNames[i] + ',"'
+        );
+      }
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 7: _formatDate — semua nama bulan
+    // ─────────────────────────────────────────────
+    describe('_formatDate — semua nama bulan Indonesia', function () {
+      var monthNames = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      for (var m = 0; m < 12; m++) {
+        var d = new Date(2025, m, 1);
+        var result = _formatDate(d);
+        assert(
+          result.indexOf(monthNames[m]) !== -1,
+          'Bulan ke-' + (m + 1) + ' mengandung "' + monthNames[m] + '"'
+        );
+      }
+    });
+
+    // ─────────────────────────────────────────────
+    // _getGreeting — fungsi murni yang diuji
+    // (disalin dari Clock module di app.js)
+    // ─────────────────────────────────────────────
+    function _getGreeting(hour) {
+      if (hour >= 5 && hour <= 11) {
+        return 'Selamat Pagi';
+      } else if (hour >= 12 && hour <= 17) {
+        return 'Selamat Siang';
+      } else {
+        return 'Selamat Malam';
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Test Suite 8: _getGreeting — nilai batas (boundary values)
+    // ─────────────────────────────────────────────
+    describe('_getGreeting — nilai batas (boundary values)', function () {
+      assert(_getGreeting(0)  === 'Selamat Malam', 'jam 0  → "Selamat Malam"');
+      assert(_getGreeting(4)  === 'Selamat Malam', 'jam 4  → "Selamat Malam"');
+      assert(_getGreeting(5)  === 'Selamat Pagi',  'jam 5  → "Selamat Pagi"');
+      assert(_getGreeting(11) === 'Selamat Pagi',  'jam 11 → "Selamat Pagi"');
+      assert(_getGreeting(12) === 'Selamat Siang', 'jam 12 → "Selamat Siang"');
+      assert(_getGreeting(17) === 'Selamat Siang', 'jam 17 → "Selamat Siang"');
+      assert(_getGreeting(18) === 'Selamat Malam', 'jam 18 → "Selamat Malam"');
+      assert(_getGreeting(23) === 'Selamat Malam', 'jam 23 → "Selamat Malam"');
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 9: _getGreeting — rentang penuh "Selamat Pagi" (5–11)
+    // ─────────────────────────────────────────────
+    describe('_getGreeting — rentang "Selamat Pagi" (jam 5–11)', function () {
+      for (var h = 5; h <= 11; h++) {
+        assert(
+          _getGreeting(h) === 'Selamat Pagi',
+          'jam ' + h + ' → "Selamat Pagi"'
+        );
+      }
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 10: _getGreeting — rentang penuh "Selamat Siang" (12–17)
+    // ─────────────────────────────────────────────
+    describe('_getGreeting — rentang "Selamat Siang" (jam 12–17)', function () {
+      for (var h = 12; h <= 17; h++) {
+        assert(
+          _getGreeting(h) === 'Selamat Siang',
+          'jam ' + h + ' → "Selamat Siang"'
+        );
+      }
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 11: _getGreeting — rentang penuh "Selamat Malam" (18–23 dan 0–4)
+    // ─────────────────────────────────────────────
+    describe('_getGreeting — rentang "Selamat Malam" (jam 18–23 dan 0–4)', function () {
+      for (var h = 18; h <= 23; h++) {
+        assert(
+          _getGreeting(h) === 'Selamat Malam',
+          'jam ' + h + ' → "Selamat Malam"'
+        );
+      }
+      for (var h = 0; h <= 4; h++) {
+        assert(
+          _getGreeting(h) === 'Selamat Malam',
+          'jam ' + h + ' → "Selamat Malam"'
+        );
+      }
+    });
+
+    // ─────────────────────────────────────────────
+    // Test Suite 12: _getGreeting — semua jam 0–23 menghasilkan salah satu dari tiga sapaan
+    // ─────────────────────────────────────────────
+    describe('_getGreeting — semua jam 0–23 menghasilkan tepat salah satu dari tiga sapaan', function () {
+      var validGreetings = ['Selamat Pagi', 'Selamat Siang', 'Selamat Malam'];
+      for (var h = 0; h <= 23; h++) {
+        var result = _getGreeting(h);
+        assert(
+          validGreetings.indexOf(result) !== -1,
+          'jam ' + h + ' → "' + result + '" (salah satu dari tiga sapaan valid)'
+        );
+      }
+    });
+
+    // ─────────────────────────────────────────────
+    // Summary
+    // ─────────────────────────────────────────────
+    var summary = document.createElement('div');
+    summary.className = 'summary ' + (failed === 0 ? 'all-pass' : 'has-fail');
+    summary.textContent = 'Hasil: ' + passed + ' passed, ' + failed + ' failed';
+    output.appendChild(summary);
+  </script>
+</body>
+</html>

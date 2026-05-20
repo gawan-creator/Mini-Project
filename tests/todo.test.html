@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Todo Unit Tests — Life Dashboard</title>
+  <style>
+    body { font-family: monospace; padding: 2rem; background: #1e1e1e; color: #d4d4d4; }
+    h1 { color: #569cd6; }
+    h2 { color: #9cdcfe; margin-top: 1.5rem; }
+    .pass { color: #4ec9b0; }
+    .fail { color: #f44747; }
+    .summary { margin-top: 2rem; font-size: 1.2rem; font-weight: bold; border-top: 1px solid #444; padding-top: 1rem; }
+    .summary.all-pass { color: #4ec9b0; }
+    .summary.has-fail { color: #f44747; }
+  </style>
+</head>
+<body>
+  <h1>Todo Unit Tests — Life Dashboard</h1>
+  <div id="output"></div>
+
+  <script>
+    'use strict';
+
+    // ─────────────────────────────────────────────
+    // Mock localStorage (untuk isolasi test)
+    // ─────────────────────────────────────────────
+    function createMockLocalStorage() {
+      var store = {};
+      return {
+        getItem: function (key) {
+          return Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null;
+        },
+        setItem: function (key, value) {
+          store[key] = String(value);
+        },
+        removeItem: function (key) {
+          delete store[key];
+        },
+        clear: function () {
+          store = {};
+        }
+      };
+    }
+
+    // ─────────────────────────────────────────────
+    // createTodo(mockStorage) — factory Todo module
+    // Mereplikasi logika Todo dari app.js dengan:
+    //   - injectable mock storage (bukan global localStorage)
+    //   - _render di-stub sebagai no-op (tidak ada DOM dependency)
+    // ─────────────────────────────────────────────
+    function createTodo(mockStorage) {
+      // Storage wrapper yang menggunakan mockStorage
+      var Storage = {
+        get: function (key, fallback) {
+          try {
+            var raw = mockStorage.getItem(key);
+            if (raw === null) return fallback;
+            return JSON.parse(raw);
+          } catch (e) {
+            return fallback;
+          }
+        },
+        set: function (key, value) {
+          try {
+            mockStorage.setItem(key, JSON.stringify(value));
+          } catch (e) {
+            // Kegagalan diabaikan secara diam-diam
+          }
+        }
+      };
+
+      var todo = {
+        /** @type {Array<{id: string, text: string, completed: boolean, createdAt: number}>} */
+        _tasks: [],
+
+        /** Menghasilkan ID unik */
+        _generateId: function () {
+          if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID();
+          }
+          return Date.now().toString() + Math.random().toString(36).slice(2);
+        },
+
+        /** Membaca array tugas dari Storage dan mengisi _tasks */
+        _load: function () {
+          this._tasks = Storage.get('lifedash_tasks', []);
+        },
+
+        /** Menulis _tasks ke Storage */
+        _save: function () {
+          Storage.set('lifedash_tasks', this._tasks);
+        },
+
+        /** No-op: tidak ada DOM dalam unit test */
+        _render: function () {
+          // stub — tidak ada DOM dependency dalam unit test
+        },
+
+        /**
+         * Validasi & tambah task baru → _save() → _render()
+         * @param {string} text
+         */
+        _addTask: function (text) {
+          if (text.trim().length === 0) return;
+          var newTask = {
+            id:        this._generateId(),
+            text:      text.trim(),
+            completed: false,
+            createdAt: Date.now()
+          };
+          this._tasks.push(newTask);
+          this._save();
+          this._render();
+        },
+
+        /**
+         * Validasi & update teks tugas → _save() → _render()
+         * @param {string} id
+         * @param {string} text
+         */
+        _editTask: function (id, text) {
+          if (text.trim().length === 0) return;
+          for (var i = 0; i < this._tasks.length; i++) {
+            if (this._tasks[i].id === id) {
+              this._tasks[i].text = text.trim();
+              break;
+            }
+          }
+          this._save();
+          this._render();
+        },
+
+        /**
+         * Toggle status completed → _save() → _render()
+         * @param {string} id
+         */
+        _toggleTask: function (id) {
+          for (var i = 0; i < this._tasks.length; i++) {
+            if (this._tasks[i].id === id) {
+              this._tasks[i].completed = !this._tasks[i].completed;
+              break;
+            }
+          }
+          this._save();
+          this._render();
+        },
+
+        /**
+         * Hapus tugas dengan id tersebut → _save() → _render()
+         * @param {string} id
+         */
+        _deleteTask: function (id) {
+          this._tasks = this._tasks.filter(function (task) {
+            return task.id !== id;
+          });
+          this._save();
+          this._render();
+        }
+      };
+
+      return todo;
+    }
+
+    // ─────────────────────────────────────────────
+    // Test runner
+    // ─────────────────────────────────────────────
+    var passed = 0;
+    var failed = 0;
+    var output = document.getElementById('output');
+
+    function deepEqual(a, b) {
+      return JSON.stringify(a) === JSON.stringify(b);
+    }
+
+    function assert(condition, message) {
+      var el = document.createElement('div');
+      if (condition) {
+        el.className = 'pass';
+        el.textContent = '  ✓ ' + message;
+        passed++;
+      } else {
+        el.className = 'fail';
+        el.textContent = '  ✗ ' + message;
+        failed++;
+      }
+      output.appendChild(el);
+    }
+
+    function describe(suiteName, fn) {
+      var h2 = document.createElement('h2');
+      h2.textContent = suiteName;
+      output.appendChild(h2);
+      fn();
+    }
+
+    // ─────────────────────────────────────────────
+    // Suite 1: _addTask — penambahan valid
+    // ─────────────────────────────────────────────
+    describe('_addTask — penambahan valid', function () {
+      var ls = createMockLocalStorage();
+      var todo = createTodo(ls);
+
+      var beforeLen = todo._tasks.length; // 0
+      todo._addTask('Belajar JavaScript');
+      var afterLen = todo._tasks.length;
+
+      assert(
+        afterLen === beforeLen + 1,
+        'menambahkan task valid meningkatkan _tasks.length sebesar 1'
+      );
+
+      var newTask = todo._tasks[todo._tasks.length - 1];
+
+      assert(
+        newTask.completed === false,
+        'task baru memiliki completed: false'
+      );
+
+      assert(
+        newTask.text === 'Belajar JavaScript',
+        'task baru memiliki teks yang benar (sudah di-trim)'
+      );
+
+      assert(
+        typeof newTask.id !== 'undefined' && newTask.id !== '',
+        'task baru memiliki properti id yang tidak kosong'
+      );
+
+      assert(
+        typeof newTask.createdAt === 'number' && newTask.createdAt > 0,
+        'task baru memiliki properti createdAt berupa number positif'
+      );
+
+      // Tambah task dengan spasi di awal/akhir — teks harus di-trim
+      todo._addTask('  Tugas dengan spasi  ');
+      var trimmedTask = todo._tasks[todo._tasks.length - 1];
+      assert(
+        trimmedTask.text === 'Tugas dengan spasi',
+        'teks task baru di-trim dari spasi awal dan akhir'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Suite 2: _addTask — penolakan input kosong/whitespace
+    // ─────────────────────────────────────────────
+    describe('_addTask — penolakan input kosong/whitespace', function () {
+      var ls = createMockLocalStorage();
+      var todo = createTodo(ls);
+
+      var lenBefore = todo._tasks.length; // 0
+
+      todo._addTask('');
+      assert(
+        todo._tasks.length === lenBefore,
+        'string kosong "" → ditolak, _tasks tidak berubah'
+      );
+
+      todo._addTask('   ');
+      assert(
+        todo._tasks.length === lenBefore,
+        'string spasi saja "   " → ditolak, _tasks tidak berubah'
+      );
+
+      todo._addTask('\t');
+      assert(
+        todo._tasks.length === lenBefore,
+        'string tab saja "\\t" → ditolak, _tasks tidak berubah'
+      );
+
+      todo._addTask('\n');
+      assert(
+        todo._tasks.length === lenBefore,
+        'string newline saja "\\n" → ditolak, _tasks tidak berubah'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Suite 3: _editTask — update teks valid
+    // ─────────────────────────────────────────────
+    describe('_editTask — update teks valid', function () {
+      var ls = createMockLocalStorage();
+      var todo = createTodo(ls);
+
+      todo._addTask('Teks Awal');
+      var task = todo._tasks[0];
+      var originalId        = task.id;
+      var originalCompleted = task.completed;
+      var originalCreatedAt = task.createdAt;
+
+      todo._editTask(task.id, 'Teks Baru');
+      var editedTask = todo._tasks[0];
+
+      assert(
+        editedTask.text === 'Teks Baru',
+        'teks task diperbarui menjadi teks baru'
+      );
+
+      assert(
+        editedTask.id === originalId,
+        'id task tidak berubah setelah edit'
+      );
+
+      assert(
+        editedTask.completed === originalCompleted,
+        'completed task tidak berubah setelah edit'
+      );
+
+      assert(
+        editedTask.createdAt === originalCreatedAt,
+        'createdAt task tidak berubah setelah edit'
+      );
+
+      // Edit dengan spasi di awal/akhir — teks harus di-trim
+      todo._editTask(task.id, '  Teks Dengan Spasi  ');
+      assert(
+        todo._tasks[0].text === 'Teks Dengan Spasi',
+        'teks hasil edit di-trim dari spasi awal dan akhir'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Suite 4: _editTask — penolakan teks kosong
+    // ─────────────────────────────────────────────
+    describe('_editTask — penolakan teks kosong', function () {
+      var ls = createMockLocalStorage();
+      var todo = createTodo(ls);
+
+      todo._addTask('Teks Asli');
+      var taskId = todo._tasks[0].id;
+
+      todo._editTask(taskId, '');
+      assert(
+        todo._tasks[0].text === 'Teks Asli',
+        'edit dengan "" → ditolak, teks asli tetap terjaga'
+      );
+
+      todo._editTask(taskId, '   ');
+      assert(
+        todo._tasks[0].text === 'Teks Asli',
+        'edit dengan "   " → ditolak, teks asli tetap terjaga'
+      );
+
+      todo._editTask(taskId, '\t');
+      assert(
+        todo._tasks[0].text === 'Teks Asli',
+        'edit dengan "\\t" → ditolak, teks asli tetap terjaga'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Suite 5: _toggleTask — toggle bolak-balik
+    // ─────────────────────────────────────────────
+    describe('_toggleTask — toggle bolak-balik', function () {
+      var ls = createMockLocalStorage();
+      var todo = createTodo(ls);
+
+      todo._addTask('Tugas Toggle');
+      var task = todo._tasks[0];
+      var taskId        = task.id;
+      var originalText  = task.text;
+      var originalCreatedAt = task.createdAt;
+
+      // Awalnya completed: false
+      assert(
+        todo._tasks[0].completed === false,
+        'task baru dimulai dengan completed: false'
+      );
+
+      // Toggle pertama: false → true
+      todo._toggleTask(taskId);
+      assert(
+        todo._tasks[0].completed === true,
+        'toggle pertama: completed menjadi true'
+      );
+
+      // Toggle kedua: true → false
+      todo._toggleTask(taskId);
+      assert(
+        todo._tasks[0].completed === false,
+        'toggle kedua: completed kembali menjadi false'
+      );
+
+      // Toggle ketiga: false → true lagi
+      todo._toggleTask(taskId);
+      assert(
+        todo._tasks[0].completed === true,
+        'toggle ketiga: completed menjadi true lagi'
+      );
+
+      // Properti lain tidak berubah setelah toggle
+      assert(
+        todo._tasks[0].id === taskId,
+        'id tidak berubah setelah toggle'
+      );
+
+      assert(
+        todo._tasks[0].text === originalText,
+        'text tidak berubah setelah toggle'
+      );
+
+      assert(
+        todo._tasks[0].createdAt === originalCreatedAt,
+        'createdAt tidak berubah setelah toggle'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Suite 6: _deleteTask — penghapusan permanen
+    // ─────────────────────────────────────────────
+    describe('_deleteTask — penghapusan permanen', function () {
+      var ls = createMockLocalStorage();
+      var todo = createTodo(ls);
+
+      todo._addTask('Tugas A');
+      todo._addTask('Tugas B');
+      todo._addTask('Tugas C');
+
+      var lenBefore = todo._tasks.length; // 3
+      var taskToDelete = todo._tasks[1]; // Tugas B
+      var deletedId = taskToDelete.id;
+
+      todo._deleteTask(deletedId);
+
+      // Task yang dihapus tidak ada lagi
+      var stillExists = todo._tasks.some(function (t) { return t.id === deletedId; });
+      assert(
+        !stillExists,
+        'task yang dihapus tidak lagi ada di _tasks'
+      );
+
+      // Panjang berkurang tepat 1
+      assert(
+        todo._tasks.length === lenBefore - 1,
+        '_tasks.length berkurang tepat 1 setelah delete'
+      );
+
+      // Task lain tidak terpengaruh
+      assert(
+        todo._tasks[0].text === 'Tugas A',
+        'task sebelum yang dihapus tidak terpengaruh'
+      );
+
+      assert(
+        todo._tasks[1].text === 'Tugas C',
+        'task setelah yang dihapus tidak terpengaruh'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Suite 7: Persistensi ke localStorage
+    // ─────────────────────────────────────────────
+    describe('Persistensi ke localStorage', function () {
+      // Test 7a: _addTask menyimpan ke localStorage
+      var ls1 = createMockLocalStorage();
+      var todo1 = createTodo(ls1);
+
+      todo1._addTask('Tugas Persisten');
+
+      var raw1 = ls1.getItem('lifedash_tasks');
+      assert(
+        raw1 !== null,
+        'setelah _addTask, localStorage memiliki key "lifedash_tasks"'
+      );
+
+      var stored1 = JSON.parse(raw1);
+      assert(
+        Array.isArray(stored1) && stored1.length === 1,
+        'setelah _addTask, localStorage mengandung array dengan 1 task'
+      );
+
+      assert(
+        stored1[0].text === 'Tugas Persisten',
+        'task yang tersimpan di localStorage memiliki teks yang benar'
+      );
+
+      // Test 7b: _deleteTask memperbarui localStorage
+      var ls2 = createMockLocalStorage();
+      var todo2 = createTodo(ls2);
+
+      todo2._addTask('Tugas X');
+      todo2._addTask('Tugas Y');
+      var idToDelete = todo2._tasks[0].id;
+
+      todo2._deleteTask(idToDelete);
+
+      var stored2 = JSON.parse(ls2.getItem('lifedash_tasks'));
+      assert(
+        stored2.length === 1,
+        'setelah _deleteTask, localStorage mencerminkan pengurangan (1 task tersisa)'
+      );
+
+      assert(
+        stored2[0].text === 'Tugas Y',
+        'task yang tersisa di localStorage adalah task yang tidak dihapus'
+      );
+
+      var deletedInStorage = stored2.some(function (t) { return t.id === idToDelete; });
+      assert(
+        !deletedInStorage,
+        'task yang dihapus tidak ada di localStorage'
+      );
+
+      // Test 7c: _toggleTask memperbarui localStorage
+      var ls3 = createMockLocalStorage();
+      var todo3 = createTodo(ls3);
+
+      todo3._addTask('Tugas Toggle Persisten');
+      var taskId3 = todo3._tasks[0].id;
+
+      // Sebelum toggle: completed = false di localStorage
+      var storedBefore = JSON.parse(ls3.getItem('lifedash_tasks'));
+      assert(
+        storedBefore[0].completed === false,
+        'sebelum toggle, localStorage mencatat completed: false'
+      );
+
+      todo3._toggleTask(taskId3);
+
+      // Setelah toggle: completed = true di localStorage
+      var storedAfter = JSON.parse(ls3.getItem('lifedash_tasks'));
+      assert(
+        storedAfter[0].completed === true,
+        'setelah _toggleTask, localStorage mencerminkan completed: true'
+      );
+
+      // Toggle balik: completed = false lagi di localStorage
+      todo3._toggleTask(taskId3);
+      var storedAfter2 = JSON.parse(ls3.getItem('lifedash_tasks'));
+      assert(
+        storedAfter2[0].completed === false,
+        'setelah toggle kedua, localStorage mencerminkan completed: false kembali'
+      );
+
+      // Test 7d: _editTask memperbarui localStorage
+      var ls4 = createMockLocalStorage();
+      var todo4 = createTodo(ls4);
+
+      todo4._addTask('Teks Lama');
+      var taskId4 = todo4._tasks[0].id;
+
+      todo4._editTask(taskId4, 'Teks Baru');
+
+      var stored4 = JSON.parse(ls4.getItem('lifedash_tasks'));
+      assert(
+        stored4[0].text === 'Teks Baru',
+        'setelah _editTask, localStorage mencerminkan teks yang diperbarui'
+      );
+    });
+
+    // ─────────────────────────────────────────────
+    // Summary
+    // ─────────────────────────────────────────────
+    var summary = document.createElement('div');
+    summary.className = 'summary ' + (failed === 0 ? 'all-pass' : 'has-fail');
+    summary.textContent = 'Hasil: ' + passed + ' passed, ' + failed + ' failed';
+    output.appendChild(summary);
+  </script>
+</body>
+</html>
