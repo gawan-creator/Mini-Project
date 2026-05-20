@@ -9,44 +9,44 @@
 <body>
   <main class="dashboard">
 
-    <!-- Komponen 1: Jam & Sapaan -->
+    <!-- Baris 1: Clock — full width -->
     <section class="card card--clock" id="clock-section">
-      <p class="clock__greeting" id="clock-greeting"></p>
       <p class="clock__time"     id="clock-time"></p>
       <p class="clock__date"     id="clock-date"></p>
+      <p class="clock__greeting" id="clock-greeting"></p>
     </section>
 
-    <!-- Komponen 2: To-Do List -->
-    <section class="card card--todo" id="todo-section">
-      <h2 class="card__title">Tugas Hari Ini</h2>
-      <div class="todo__input-row">
-        <input type="text" id="todo-input" placeholder="Tambah tugas baru…" aria-label="Tambah tugas baru" />
-        <button id="todo-add-btn" type="button">Tambah</button>
-      </div>
-      <ul class="todo__list" id="todo-list" aria-label="Daftar tugas"></ul>
-    </section>
-
-    <!-- Komponen 3: Focus Timer -->
+    <!-- Baris 2 kiri: Focus Timer -->
     <section class="card card--timer" id="timer-section">
       <h2 class="card__title">Focus Timer</h2>
-      <p class="timer__display" id="timer-display" aria-live="polite" aria-label="Waktu tersisa">25:00</p>
+      <p class="timer__display" id="timer-display" aria-live="polite">25:00</p>
       <div class="timer__controls">
-        <button id="timer-start-btn" type="button">Mulai</button>
-        <button id="timer-stop-btn"  type="button">Berhenti</button>
+        <button id="timer-start-btn" type="button">Start</button>
+        <button id="timer-stop-btn"  type="button">Stop</button>
         <button id="timer-reset-btn" type="button">Reset</button>
       </div>
     </section>
 
-    <!-- Komponen 4: Quick Links -->
+    <!-- Baris 2 kanan: Tasks -->
+    <section class="card card--todo" id="todo-section">
+      <h2 class="card__title">Tasks</h2>
+      <div class="todo__input-row">
+        <input type="text" id="todo-input" placeholder="Add a new task..." aria-label="Add a new task" />
+        <button id="todo-add-btn" type="button">Add</button>
+      </div>
+      <ul class="todo__list" id="todo-list" aria-label="Task list"></ul>
+    </section>
+
+    <!-- Baris 3 kiri: Quick Links -->
     <section class="card card--links" id="links-section">
-      <h2 class="card__title">Tautan Cepat</h2>
+      <h2 class="card__title">Quick Links</h2>
       <div class="links__input-row">
-        <input type="text" id="links-name-input" placeholder="Nama situs…"  aria-label="Nama situs" />
-        <input type="url"  id="links-url-input"  placeholder="https://…"    aria-label="URL situs" />
-        <button id="links-add-btn" type="button">Simpan</button>
+        <input type="text" id="links-name-input" placeholder="Link name"  aria-label="Link name" />
+        <input type="url"  id="links-url-input"  placeholder="URL"        aria-label="URL" />
+        <button id="links-add-btn" type="button">Add Link</button>
       </div>
       <p class="links__error" id="links-error" hidden aria-live="polite"></p>
-      <ul class="links__list" id="links-list" aria-label="Daftar tautan cepat"></ul>
+      <ul class="links__list" id="links-list" aria-label="Quick links"></ul>
     </section>
 
   </main>

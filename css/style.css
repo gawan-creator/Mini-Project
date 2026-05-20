@@ -1,63 +1,34 @@
 /* ==========================================================================
    Life Dashboard — css/style.css
-   Struktur:
-   1. CSS Custom Properties
-   2. Reset & Base Styles
-   3. Layout — .dashboard grid
-   4. Card — gaya dasar kartu
-   5. Component: Clock
-   6. Component: Todo
-   7. Component: Timer
-   8. Component: Links
-   9. Responsive Breakpoints
    ========================================================================== */
 
 /* ==========================================================================
    1. CSS Custom Properties
    ========================================================================== */
 :root {
-  /* Warna */
-  --color-bg:          #0f172a;
-  --color-surface:     #1e293b;
-  --color-surface-alt: #273549;
-  --color-border:      #334155;
-  --color-primary:     #38bdf8;
-  --color-primary-dim: #0ea5e9;
-  --color-success:     #4ade80;
-  --color-danger:      #f87171;
-  --color-warning:     #fbbf24;
-  --color-text:        #e2e8f0;
-  --color-text-muted:  #94a3b8;
-  --color-text-done:   #64748b;
+  --color-bg-from:     #6b48ff;
+  --color-bg-to:       #a855f7;
+  --color-surface:     #ffffff;
+  --color-surface-alt: #f3f4f6;
+  --color-border:      #e5e7eb;
+  --color-primary:     #4f6ef7;
+  --color-primary-dark:#3b5bdb;
+  --color-danger:      #ef4444;
+  --color-text:        #111827;
+  --color-text-muted:  #6b7280;
+  --color-text-done:   #9ca3af;
+  --color-clock-time:  #4f6ef7;
 
-  /* Tipografi */
-  --font-family:       'Segoe UI', system-ui, -apple-system, sans-serif;
-  --font-mono:         'Consolas', 'Courier New', monospace;
-  --font-size-base:    1rem;
-  --font-size-sm:      0.875rem;
-  --font-size-lg:      1.25rem;
-  --font-size-xl:      2rem;
-  --font-size-2xl:     3rem;
-  --font-size-3xl:     4.5rem;
+  --font-family:  'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono:    'Consolas', 'Courier New', monospace;
 
-  /* Spacing */
-  --space-xs:   0.25rem;
-  --space-sm:   0.5rem;
-  --space-md:   1rem;
-  --space-lg:   1.5rem;
-  --space-xl:   2rem;
-
-  /* Border */
   --radius-sm:  0.375rem;
   --radius-md:  0.75rem;
-  --radius-lg:  1rem;
+  --radius-lg:  1.25rem;
+  --radius-pill: 9999px;
 
-  /* Shadow */
-  --shadow-card: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3);
-  --shadow-btn:  0 1px 3px rgba(0,0,0,0.3);
-
-  /* Transition */
-  --transition: 150ms ease;
+  --shadow-card: 0 4px 24px rgba(0,0,0,0.10), 0 1.5px 6px rgba(0,0,0,0.07);
+  --transition:  150ms ease;
 }
 
 /* ==========================================================================
@@ -71,193 +42,165 @@
   padding: 0;
 }
 
-html {
-  font-size: 16px;
-  -webkit-text-size-adjust: 100%;
-}
+html { font-size: 16px; }
 
 body {
   font-family: var(--font-family);
-  font-size: var(--font-size-base);
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  line-height: 1.6;
   min-height: 100vh;
+  background: linear-gradient(135deg, var(--color-bg-from) 0%, var(--color-bg-to) 100%);
+  color: var(--color-text);
+  line-height: 1.5;
+  padding: 2rem 1.5rem;
 }
 
-ul {
-  list-style: none;
-}
+ul  { list-style: none; }
 
 button {
   cursor: pointer;
   font-family: inherit;
-  font-size: var(--font-size-sm);
   border: none;
   border-radius: var(--radius-sm);
-  padding: var(--space-xs) var(--space-sm);
   transition: opacity var(--transition), background-color var(--transition);
 }
-
-button:hover {
-  opacity: 0.85;
-}
-
-button:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
+button:hover        { opacity: 0.88; }
+button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
 input[type="text"],
 input[type="url"] {
   font-family: inherit;
-  font-size: var(--font-size-sm);
-  background-color: var(--color-surface-alt);
+  font-size: 0.875rem;
+  background: var(--color-surface);
   color: var(--color-text);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-sm);
-  padding: var(--space-xs) var(--space-sm);
+  padding: 0.45rem 0.75rem;
   outline: none;
   transition: border-color var(--transition);
   width: 100%;
 }
-
 input[type="text"]:focus,
-input[type="url"]:focus {
-  border-color: var(--color-primary);
-}
+input[type="url"]:focus { border-color: var(--color-primary); }
 
 a {
   color: var(--color-primary);
   text-decoration: none;
-  transition: color var(--transition);
 }
-
-a:hover {
-  color: var(--color-primary-dim);
-  text-decoration: underline;
-}
+a:hover { text-decoration: underline; }
 
 /* ==========================================================================
-   3. Layout — .dashboard grid
+   3. Dashboard Layout
    ========================================================================== */
 .dashboard {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto;
-  gap: var(--space-lg);
-  padding: var(--space-xl);
-  max-width: 1200px;
+  grid-template-rows: auto auto auto;
+  gap: 1.25rem;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
+/* Clock spans full width */
+.card--clock {
+  grid-column: 1 / -1;
+}
+
 /* ==========================================================================
-   4. Card — gaya dasar kartu bersama
+   4. Card base
    ========================================================================== */
 .card {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   border-radius: var(--radius-lg);
-  padding: var(--space-lg);
+  padding: 1.5rem;
   box-shadow: var(--shadow-card);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
 }
 
 .card__title {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--color-text);
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: var(--space-sm);
+  margin-bottom: 1rem;
 }
 
 /* ==========================================================================
-   5. Component: Clock
+   5. Clock
    ========================================================================== */
 .card--clock {
   text-align: center;
-  justify-content: center;
-  align-items: center;
-}
-
-.clock__greeting {
-  font-size: var(--font-size-lg);
-  color: var(--color-primary);
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  padding: 1.75rem 2rem;
 }
 
 .clock__time {
   font-family: var(--font-mono);
-  font-size: var(--font-size-3xl);
+  font-size: 3.5rem;
   font-weight: 700;
-  color: var(--color-text);
-  letter-spacing: 0.05em;
+  color: var(--color-clock-time);
+  letter-spacing: 0.04em;
   line-height: 1;
 }
 
 .clock__date {
-  font-size: var(--font-size-base);
+  font-size: 0.9rem;
   color: var(--color-text-muted);
+  margin-top: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.clock__greeting {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
 }
 
 /* ==========================================================================
-   6. Component: Todo
+   6. Todo
    ========================================================================== */
+.card--todo { display: flex; flex-direction: column; gap: 0.75rem; }
+
 .todo__input-row {
   display: flex;
-  gap: var(--space-sm);
+  gap: 0.5rem;
 }
-
-.todo__input-row input {
-  flex: 1;
-}
+.todo__input-row input { flex: 1; }
 
 #todo-add-btn {
-  background-color: var(--color-primary);
-  color: #0f172a;
+  background: var(--color-primary);
+  color: #fff;
   font-weight: 600;
-  padding: var(--space-xs) var(--space-md);
+  font-size: 0.875rem;
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-sm);
   white-space: nowrap;
 }
-
-#todo-add-btn:hover {
-  background-color: var(--color-primary-dim);
-  opacity: 1;
-}
+#todo-add-btn:hover { background: var(--color-primary-dark); opacity: 1; }
 
 .todo__list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
-  max-height: 280px;
+  gap: 0.4rem;
+  max-height: 260px;
   overflow-y: auto;
 }
 
 .todo__item {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-xs) var(--space-sm);
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
   border-radius: var(--radius-sm);
-  background-color: var(--color-surface-alt);
-  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
 }
 
 .todo__item input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
   flex-shrink: 0;
-  accent-color: var(--color-success);
+  accent-color: var(--color-primary);
   cursor: pointer;
 }
 
 .todo__item-text {
   flex: 1;
-  font-size: var(--font-size-sm);
+  font-size: 0.875rem;
   word-break: break-word;
 }
 
@@ -268,164 +211,141 @@ a:hover {
 
 .todo__btn {
   flex-shrink: 0;
-  padding: 2px var(--space-xs);
   font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
 }
-
-.todo__btn--edit {
-  background-color: var(--color-warning);
-  color: #0f172a;
-}
-
-.todo__btn--delete {
-  background-color: var(--color-danger);
-  color: #fff;
-}
+.todo__btn--edit   { background: #f59e0b; color: #fff; }
+.todo__btn--delete { background: var(--color-danger); color: #fff; }
 
 /* ==========================================================================
-   7. Component: Timer
+   7. Timer
    ========================================================================== */
 .card--timer {
   text-align: center;
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 0.75rem;
 }
 
 .timer__display {
   font-family: var(--font-mono);
-  font-size: var(--font-size-3xl);
+  font-size: 3.5rem;
   font-weight: 700;
-  color: var(--color-text);
-  letter-spacing: 0.05em;
+  color: var(--color-clock-time);
+  letter-spacing: 0.04em;
   line-height: 1;
 }
 
 .timer__controls {
   display: flex;
-  gap: var(--space-sm);
+  gap: 0.5rem;
   justify-content: center;
-  flex-wrap: wrap;
 }
 
 #timer-start-btn {
-  background-color: var(--color-success);
-  color: #0f172a;
+  background: var(--color-primary);
+  color: #fff;
   font-weight: 600;
-  padding: var(--space-xs) var(--space-lg);
+  font-size: 0.875rem;
+  padding: 0.45rem 1.25rem;
 }
-
 #timer-stop-btn {
-  background-color: var(--color-warning);
-  color: #0f172a;
-  font-weight: 600;
-  padding: var(--space-xs) var(--space-lg);
-}
-
-#timer-reset-btn {
-  background-color: var(--color-surface-alt);
+  background: #e5e7eb;
   color: var(--color-text);
-  border: 1px solid var(--color-border);
   font-weight: 600;
-  padding: var(--space-xs) var(--space-lg);
+  font-size: 0.875rem;
+  padding: 0.45rem 1.25rem;
+}
+#timer-reset-btn {
+  background: #e5e7eb;
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.45rem 1.25rem;
 }
 
 /* ==========================================================================
-   8. Component: Links
+   8. Links
    ========================================================================== */
+.card--links { display: flex; flex-direction: column; gap: 0.75rem; }
+
 .links__input-row {
   display: flex;
-  gap: var(--space-sm);
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
-
-.links__input-row input {
-  flex: 1;
-  min-width: 100px;
-}
+.links__input-row input { flex: 1; min-width: 90px; }
 
 #links-add-btn {
-  background-color: var(--color-primary);
-  color: #0f172a;
+  background: var(--color-primary);
+  color: #fff;
   font-weight: 600;
-  padding: var(--space-xs) var(--space-md);
+  font-size: 0.875rem;
+  padding: 0.45rem 1rem;
   white-space: nowrap;
 }
-
-#links-add-btn:hover {
-  background-color: var(--color-primary-dim);
-  opacity: 1;
-}
+#links-add-btn:hover { background: var(--color-primary-dark); opacity: 1; }
 
 .links__error {
-  font-size: var(--font-size-sm);
+  font-size: 0.8rem;
   color: var(--color-danger);
-  padding: var(--space-xs) 0;
 }
 
+/* Links displayed as pill buttons */
 .links__list {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  max-height: 240px;
-  overflow-y: auto;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .links__item {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-surface-alt);
-  border: 1px solid var(--color-border);
+  background: var(--color-primary);
+  border-radius: var(--radius-pill);
+  padding: 0.3rem 0.75rem 0.3rem 1rem;
+  gap: 0.4rem;
 }
 
 .links__anchor {
-  flex: 1;
-  font-size: var(--font-size-sm);
-  color: var(--color-primary);
-  word-break: break-all;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
 }
-
-.links__anchor:hover {
-  color: var(--color-primary-dim);
-}
+.links__anchor:hover { text-decoration: underline; color: #fff; }
 
 .links__btn--delete {
-  flex-shrink: 0;
-  background-color: var(--color-danger);
+  background: rgba(255,255,255,0.25);
   color: #fff;
-  padding: 2px var(--space-xs);
-  font-size: 0.75rem;
+  border-radius: 50%;
+  width: 1.1rem;
+  height: 1.1rem;
+  font-size: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
 }
+.links__btn--delete:hover { background: rgba(255,255,255,0.45); opacity: 1; }
 
 /* ==========================================================================
-   9. Responsive Breakpoints
+   9. Responsive
    ========================================================================== */
-
-/* Tablet: lebar < 1024px → 1 kolom */
 @media (max-width: 1023px) {
-  .dashboard {
-    grid-template-columns: 1fr;
-  }
+  .dashboard { grid-template-columns: 1fr; }
+  .card--clock { grid-column: 1; }
 }
 
-/* Mobile: lebar < 768px → padding dan gap lebih kecil */
 @media (max-width: 767px) {
-  .dashboard {
-    padding: var(--space-md);
-    gap: var(--space-md);
-  }
-
+  body { padding: 1rem; }
+  .dashboard { gap: 1rem; }
   .clock__time,
-  .timer__display {
-    font-size: var(--font-size-2xl);
-  }
-
-  .links__input-row {
-    flex-direction: column;
-  }
-
-  .links__input-row input {
-    width: 100%;
-  }
+  .timer__display { font-size: 2.5rem; }
+  .links__input-row { flex-direction: column; }
 }

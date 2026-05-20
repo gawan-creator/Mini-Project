@@ -499,7 +499,7 @@ var LifeDashboard = (function () {
         deleteBtn.type = 'button';
         deleteBtn.setAttribute('data-action', 'delete');
         deleteBtn.className = 'links__btn links__btn--delete';
-        deleteBtn.textContent = 'Hapus';
+        deleteBtn.textContent = '×';
         deleteBtn.setAttribute('aria-label', 'Hapus tautan ' + link.name);
 
         li.appendChild(a);
