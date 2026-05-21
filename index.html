@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,14 +9,19 @@
 <body>
   <main class="dashboard">
 
-    <!-- Baris 1: Clock — full width -->
+    <!-- Row 1: Clock — full width -->
     <section class="card card--clock" id="clock-section">
       <p class="clock__time"     id="clock-time"></p>
       <p class="clock__date"     id="clock-date"></p>
       <p class="clock__greeting" id="clock-greeting"></p>
+      <!-- Challenge: Custom name in greeting -->
+      <div class="clock__name-row">
+        <input type="text" id="name-input" placeholder="Enter your name..." aria-label="Your name" maxlength="30" />
+        <button id="name-save-btn" type="button">Save</button>
+      </div>
     </section>
 
-    <!-- Baris 2 kiri: Focus Timer -->
+    <!-- Row 2 left: Focus Timer -->
     <section class="card card--timer" id="timer-section">
       <h2 class="card__title">Focus Timer</h2>
       <p class="timer__display" id="timer-display" aria-live="polite">25:00</p>
@@ -25,19 +30,26 @@
         <button id="timer-stop-btn"  type="button">Stop</button>
         <button id="timer-reset-btn" type="button">Reset</button>
       </div>
+      <!-- Challenge: Change Pomodoro time -->
+      <div class="timer__custom-row">
+        <label for="timer-custom-input" class="timer__custom-label">Set duration (min):</label>
+        <input type="number" id="timer-custom-input" min="1" max="120" value="25" aria-label="Custom timer duration in minutes" />
+        <button id="timer-set-btn" type="button">Set</button>
+      </div>
     </section>
 
-    <!-- Baris 2 kanan: Tasks -->
+    <!-- Row 2 right: Tasks -->
     <section class="card card--todo" id="todo-section">
       <h2 class="card__title">Tasks</h2>
       <div class="todo__input-row">
         <input type="text" id="todo-input" placeholder="Add a new task..." aria-label="Add a new task" />
         <button id="todo-add-btn" type="button">Add</button>
       </div>
+      <p class="todo__error" id="todo-error" hidden aria-live="polite"></p>
       <ul class="todo__list" id="todo-list" aria-label="Task list"></ul>
     </section>
 
-    <!-- Baris 3 kiri: Quick Links -->
+    <!-- Row 3 left: Quick Links -->
     <section class="card card--links" id="links-section">
       <h2 class="card__title">Quick Links</h2>
       <div class="links__input-row">

@@ -349,3 +349,78 @@ a:hover { text-decoration: underline; }
   .timer__display { font-size: 2.5rem; }
   .links__input-row { flex-direction: column; }
 }
+
+/* ==========================================================================
+   Challenges
+   ========================================================================== */
+
+/* Challenge 1: Custom name in greeting */
+.clock__name-row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.75rem;
+}
+
+.clock__name-row input {
+  width: auto;
+  max-width: 200px;
+  text-align: center;
+  font-size: 0.875rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.75rem;
+}
+
+#name-save-btn {
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-sm);
+}
+
+/* Challenge 2: Change Pomodoro time */
+.timer__custom-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.timer__custom-label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+#timer-custom-input {
+  width: 4rem;
+  text-align: center;
+  font-size: 0.875rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.5rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  outline: none;
+}
+
+#timer-custom-input:focus { border-color: var(--color-primary); }
+
+#timer-set-btn {
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+/* Challenge 3: Prevent duplicate tasks — error message */
+.todo__error {
+  font-size: 0.8rem;
+  color: var(--color-danger);
+  padding: 0.1rem 0;
+}

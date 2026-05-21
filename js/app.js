@@ -48,11 +48,32 @@ var LifeDashboard = (function () {
   // Clock — modul jam, tanggal, dan sapaan
   // ─────────────────────────────────────────────
   var Clock = {
-    /**
-     * Memulai interval 1 detik dan melakukan render pertama kali.
-     */
+    /** Challenge: Custom name in greeting */
+    _userName: '',
+
     init: function () {
       var self = this;
+
+      // Load saved name
+      self._userName = Storage.get('lifedash_name', '');
+      var nameInput = document.getElementById('name-input');
+      var nameSaveBtn = document.getElementById('name-save-btn');
+      if (nameInput && self._userName) {
+        nameInput.value = self._userName;
+      }
+      if (nameSaveBtn) {
+        nameSaveBtn.addEventListener('click', function () {
+          var val = nameInput ? nameInput.value.trim() : '';
+          self._userName = val;
+          Storage.set('lifedash_name', val);
+          self._tick();
+        });
+      }
+      if (nameInput) {
+        nameInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') nameSaveBtn && nameSaveBtn.click();
+        });
+      }
       self._tick();
       setInterval(function () {
         self._tick();
@@ -62,9 +83,13 @@ var LifeDashboard = (function () {
     /** Dipanggil setiap detik: update DOM jam, tanggal, sapaan. */
     _tick: function () {
       var now = new Date();
-      document.getElementById('clock-time').textContent     = this._formatTime(now);
-      document.getElementById('clock-date').textContent     = this._formatDate(now);
-      document.getElementById('clock-greeting').textContent = this._getGreeting(now.getHours());
+      document.getElementById('clock-time').textContent = this._formatTime(now);
+      document.getElementById('clock-date').textContent = this._formatDate(now);
+      var greeting = this._getGreeting(now.getHours());
+      if (this._userName) {
+        greeting += ', ' + this._userName + '!';
+      }
+      document.getElementById('clock-greeting').textContent = greeting;
     },
 
     /**
@@ -263,9 +288,29 @@ var LifeDashboard = (function () {
      */
     _addTask: function (text) {
       if (text.trim().length === 0) return;
+
+      // Challenge: Prevent duplicate tasks (case-insensitive)
+      var trimmed = text.trim();
+      var isDuplicate = this._tasks.some(function (t) {
+        return t.text.toLowerCase() === trimmed.toLowerCase();
+      });
+      if (isDuplicate) {
+        var errorEl = document.getElementById('todo-error');
+        if (errorEl) {
+          errorEl.textContent = 'Task "' + trimmed + '" already exists.';
+          errorEl.hidden = false;
+          setTimeout(function () { errorEl.hidden = true; }, 3000);
+        }
+        return;
+      }
+
+      // Hide error if previously shown
+      var errorEl = document.getElementById('todo-error');
+      if (errorEl) errorEl.hidden = true;
+
       var newTask = {
         id:        this._generateId(),
-        text:      text.trim(),
+        text:      trimmed,
         completed: false,
         createdAt: Date.now()
       };
@@ -325,6 +370,8 @@ var LifeDashboard = (function () {
   var Timer = {
     /** @type {number} detik tersisa (default 25 × 60 = 1500) */
     _remaining: 1500,
+    /** @type {number} durasi default dalam detik */
+    _defaultDuration: 1500,
 
     /** @type {number|null} ID dari setInterval, null jika tidak berjalan */
     _intervalId: null,
@@ -334,15 +381,40 @@ var LifeDashboard = (function () {
      */
     init: function () {
       var self = this;
+
+      // Challenge: load saved custom duration
+      var saved = Storage.get('lifedash_timer_duration', 1500);
+      self._defaultDuration = saved;
+      self._remaining = saved;
+      var customInput = document.getElementById('timer-custom-input');
+      if (customInput) customInput.value = Math.round(saved / 60);
+
       self._render();
 
-      var startBtn = document.getElementById('timer-start-btn');
-      var stopBtn  = document.getElementById('timer-stop-btn');
-      var resetBtn = document.getElementById('timer-reset-btn');
+      var startBtn  = document.getElementById('timer-start-btn');
+      var stopBtn   = document.getElementById('timer-stop-btn');
+      var resetBtn  = document.getElementById('timer-reset-btn');
+      var setBtn    = document.getElementById('timer-set-btn');
 
       if (startBtn) startBtn.addEventListener('click', function () { self._start(); });
       if (stopBtn)  stopBtn.addEventListener('click',  function () { self._stop(); });
       if (resetBtn) resetBtn.addEventListener('click', function () { self._reset(); });
+
+      // Challenge: Change Pomodoro time
+      if (setBtn) {
+        setBtn.addEventListener('click', function () {
+          var mins = parseInt(customInput ? customInput.value : '25', 10);
+          if (isNaN(mins) || mins < 1) mins = 1;
+          if (mins > 120) mins = 120;
+          var secs = mins * 60;
+          self._defaultDuration = secs;
+          Storage.set('lifedash_timer_duration', secs);
+          self._stop();
+          self._remaining = secs;
+          self._render();
+          if (customInput) customInput.value = mins;
+        });
+      }
     },
 
     /** Mulai interval jika belum berjalan. */
@@ -360,10 +432,10 @@ var LifeDashboard = (function () {
       this._intervalId = null;
     },
 
-    /** Hentikan interval dan kembalikan _remaining ke 1500. */
+    /** Hentikan interval dan kembalikan _remaining ke durasi default. */
     _reset: function () {
       this._stop();
-      this._remaining = 1500;
+      this._remaining = this._defaultDuration;
       this._render();
     },
 
